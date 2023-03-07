@@ -11,26 +11,32 @@ public class Main {
 
         // добавление хендлеров (обработчиков)
         server.addHandler("GET", "/classic.html", (r, o) -> {
-                    try {
-                        var filePath = Path.of(".", "public", r.getPath());
-                        var mimeType = Files.probeContentType(filePath);
-                        var template = Files.readString(filePath);
-                        var content = template.replace(
-                                "{time}",
-                                LocalDateTime.now().toString()
-                        ).getBytes();
-                        o.write((
-                                "HTTP/1.1 200 OK\r\n" +
-                                        "Content-Type: " + mimeType + "\r\n" +
-                                        "Content-Length: " + content.length + "\r\n" +
-                                        "Connection: close\r\n" +
-                                        "\r\n"
-                        ).getBytes());
-                        o.write(content);
-                        o.flush();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+            try {
+                var filePath = Path.of(".", "public", r.getPath());
+                var mimeType = Files.probeContentType(filePath);
+                var template = Files.readString(filePath);
+                var content = template.replace(
+                        "{time}",
+                        LocalDateTime.now().toString()
+                ).getBytes();
+                o.write((
+                        "HTTP/1.1 200 OK\r\n" +
+                                "Content-Type: " + mimeType + "\r\n" +
+                                "Content-Length: " + content.length + "\r\n" +
+                                "Connection: close\r\n" +
+                                "\r\n"
+                ).getBytes());
+                o.write(content);
+                o.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        server.addHandler("POST", "/messages", (r, o) -> {
+            // handlers code
+        });
+        server.addHandler("GET", "/messages", (r, o) -> {
+            // handlers code
         });
 
         server.start();
