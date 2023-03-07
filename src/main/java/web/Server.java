@@ -9,7 +9,9 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,9 +22,41 @@ public class Server {
     private final int POOLSIZE = 64;
     private int port;
     private ExecutorService executorService = Executors.newFixedThreadPool(POOLSIZE);
+    public static Map<String, Map<String, Handler>> handlerMap = new HashMap<>();
+    private final Handler handlerDefault = (r, o) -> {
+        try {
+            var filePath = Path.of(".", "public", r.getPath());
+            var mimeType = Files.probeContentType(filePath);//"application/octet-stream" "text/plain"
+            var length = Files.size(filePath);
+            o.write((
+                    "HTTP/1.1 200 OK\r\n" +
+                            "Content-Type: " + mimeType + "\r\n" +
+                            "Content-Length: " + length + "\r\n" +
+                            "Connection: close\r\n" +
+                            "\r\n"
+            ).getBytes());
+            Files.copy(filePath, o);
+            o.flush();
+        } catch (
+                IOException e) {
+            e.printStackTrace();
+        }
+    };
+
     public Server(int port) {
         this.port = port;
     }
+
+    public void addHandler(String method, String path, Handler handler) {
+        if (handlerMap.containsKey(method)) {
+            handlerMap.get(method).put(path, handler);
+        } else {
+            Map<String, Handler> localMap = new HashMap<>();
+            localMap.put(path, handler);
+            handlerMap.put(method, localMap);
+        }
+    }
+
 
     public void start() {
         System.out.println("Starting server at " + port + " port.");
@@ -46,15 +80,17 @@ public class Server {
             final var parts = requestLine.split(" ");
 
             if (parts.length != 3) {
-
                 return;
             }
 
             Request request = new Request(parts[0], parts[1]);
-
-
-            final var path = parts[1];
-            if (!validPaths.contains(path)) {
+            if (handlerMap.get(request.getMethod()).containsKey(request.getPath())) {
+                Handler handler = handlerMap.get(request.getMethod()).get(request.getPath());
+                handler.handle(request, out);
+            }
+            if (validPaths.contains(request.getPath())) {
+                handlerDefault.handle(request, out);
+            } else {
                 out.write((
                         "HTTP/1.1 404 Not Found\r\n" +
                                 "Content-Length: 0\r\n" +
@@ -62,41 +98,7 @@ public class Server {
                                 "\r\n"
                 ).getBytes());
                 out.flush();
-                return;
             }
-
-            final var filePath = Path.of(".", "public", path);
-            final var mimeType = Files.probeContentType(filePath);//"application/octet-stream" "text/plain"
-
-            // special case for classic
-            if (path.equals("/classic.html")) {
-                final var template = Files.readString(filePath);
-                final var content = template.replace(
-                        "{time}",
-                        LocalDateTime.now().toString()
-                ).getBytes();
-                out.write((
-                        "HTTP/1.1 200 OK\r\n" +
-                                "Content-Type: " + mimeType + "\r\n" +
-                                "Content-Length: " + content.length + "\r\n" +
-                                "Connection: close\r\n" +
-                                "\r\n"
-                ).getBytes());
-                out.write(content);
-                out.flush();
-                return;
-            }
-
-            final var length = Files.size(filePath);
-            out.write((
-                    "HTTP/1.1 200 OK\r\n" +
-                            "Content-Type: " + mimeType + "\r\n" +
-                            "Content-Length: " + length + "\r\n" +
-                            "Connection: close\r\n" +
-                            "\r\n"
-            ).getBytes());
-            Files.copy(filePath, out);
-            out.flush();
         } catch (
                 IOException e) {
             e.printStackTrace();
