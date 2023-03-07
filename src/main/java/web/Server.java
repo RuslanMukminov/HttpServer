@@ -50,6 +50,9 @@ public class Server {
                 return;
             }
 
+            Request request = new Request(parts[0], parts[1]);
+
+
             final var path = parts[1];
             if (!validPaths.contains(path)) {
                 out.write((
