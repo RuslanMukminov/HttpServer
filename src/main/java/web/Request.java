@@ -1,5 +1,8 @@
 package web;
 
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.net.URIBuilder;
+
 import java.util.List;
 
 public class Request {
@@ -7,6 +10,8 @@ public class Request {
     private String path;
     private List<String> headers;
     private byte[] body;
+
+    private URIBuilder uriBuilder;
 
     public Request(String method, String path, List<String> headers, byte[] body) {
         this.method = method;
@@ -18,6 +23,12 @@ public class Request {
     public Request(String method, String path) {
         this.method = method;
         this.path = path;
+    }
+
+    public Request(String method, URIBuilder uriBuilder) {
+        this.method = method;
+        this.uriBuilder = uriBuilder;
+        path = uriBuilder.getPath();
     }
 
     public String getMethod() {
@@ -34,5 +45,13 @@ public class Request {
 
     public byte[] getBody() {
         return body;
+    }
+
+    public List<NameValuePair> getQueryParams() {
+        return uriBuilder.getQueryParams();
+    }
+
+    public NameValuePair getQueryParam(String name) {
+        return uriBuilder.getFirstQueryParam(name);
     }
 }

@@ -1,11 +1,15 @@
 package web;
 
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.net.URIBuilder;
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -79,10 +83,14 @@ public class Server {
             final var parts = requestLine.split(" ");
 
             if (parts.length != 3) {
+                socket.close();
                 return;
             }
 
-            Request request = new Request(parts[0], parts[1]);
+            URIBuilder uriBuilder = new URIBuilder(parts[1]);
+
+            Request request = new Request(parts[0], uriBuilder);
+
             if (handlerMap.get(request.getMethod()).containsKey(request.getPath())) {
                 Handler handler = handlerMap.get(request.getMethod()).get(request.getPath());
                 handler.handle(request, out);
@@ -98,9 +106,10 @@ public class Server {
                 ).getBytes());
                 out.flush();
             }
-        } catch (
-                IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
     }
 }
